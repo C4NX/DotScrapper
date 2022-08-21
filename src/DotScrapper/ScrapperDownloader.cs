@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.Metadata.Ecma335;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
-using OpenQA.Selenium.Chromium;
+﻿using OpenQA.Selenium.Chromium;
 using Serilog;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
@@ -122,7 +115,7 @@ namespace DotScrapper
                         }
                     }
 
-                    _logger.Information("Downloading all... {p}%", (startCount - sources.Count)* 100 / startCount);
+                    _logger.Information("Downloading all... {p}%", (startCount - sources.Count) * 100 / startCount);
                     completeCount++;
                 }
                 catch (Exception ex)

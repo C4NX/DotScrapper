@@ -1,13 +1,11 @@
-﻿using System.ComponentModel;
-using System.Diagnostics;
-using DotScrapper;
-using DotScrapper.Actions;
+﻿using DotScrapper;
 using DotScrapper.Scrappers;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Edge;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
+using System.Diagnostics;
 
 // when DotScrapper exit, some logs still happen so we have that var to handle it.
 bool isLoggerEnable = true;
@@ -70,9 +68,7 @@ try
 
     // -[-]hide option
     if (!Arguments.HasArguments(args, "show", "s"))
-    {
         edgeOptions.AddArgument("--headless");
-    }
 
     driver = new EdgeDriver(chromeDriverService, edgeOptions);
 
