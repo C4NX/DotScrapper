@@ -7,7 +7,8 @@ using OpenQA.Selenium;
 using OpenQA.Selenium.Edge;
 using Serilog;
 
-bool IsLoggerEnable = true;
+// when DotScrapper exit, some logs still happen so we have that var to handle it.
+bool isLoggerEnable = true;
 
 string? useParam = Arguments.GetArgumentData(args, "use", "u");
 
@@ -18,7 +19,7 @@ string? queryParam = Arguments.GetArgumentData(args, "query", "q")
                      ?? "Cat";
 
 Log.Logger = new LoggerConfiguration()
-    .Filter.ByExcluding(x=>!IsLoggerEnable)
+    .Filter.ByExcluding(x=>!isLoggerEnable)
     .MinimumLevel.Verbose()
     .WriteTo.Console()
     .WriteTo.Debug()
@@ -83,7 +84,7 @@ Console.CancelKeyPress += (sender, e) =>
     logger.Information("Exiting...");
 
     // using that because Selenium may try to continue the connection to that driver, and create errors, like WebDriverException.
-    IsLoggerEnable = false;
+    isLoggerEnable = false;
     driver.Quit();
     Environment.Exit(0);
 };
