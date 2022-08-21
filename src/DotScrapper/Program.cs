@@ -6,11 +6,19 @@ using DotScrapper.Scrappers;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Edge;
 using Serilog;
+using Serilog.Core;
+using Serilog.Events;
 
 // when DotScrapper exit, some logs still happen so we have that var to handle it.
 bool isLoggerEnable = true;
+LoggingLevelSwitch? loggingLevel = new LoggingLevelSwitch(Arguments.HasArguments(args,
+    "verbose",
+    "v")
+    ? LogEventLevel.Verbose
+    : LogEventLevel.Information);
 
-string? useParam = Arguments.GetArgumentData(args, "use", "u");
+string? useParam = Arguments.GetArgumentData(args, "use", "u")
+                   ?? nameof(Bing);
 
 string? outParam = Arguments.GetArgumentData(args, "out", "o")
                    ?? "Out\\";
@@ -18,9 +26,11 @@ string? outParam = Arguments.GetArgumentData(args, "out", "o")
 string? queryParam = Arguments.GetArgumentData(args, "query", "q")
                      ?? "Cat";
 
+string? postParam = Arguments.GetArgumentData(args, "post", "p");
+
 Log.Logger = new LoggerConfiguration()
     .Filter.ByExcluding(x=>!isLoggerEnable)
-    .MinimumLevel.Verbose()
+    .MinimumLevel.ControlledBy(loggingLevel)
     .WriteTo.Console()
     .WriteTo.Debug()
     .CreateLogger();
@@ -97,17 +107,27 @@ var scrappers = new ScrapperManager();
 scrappers.ScanAssembly(typeof(Program).Assembly);
 
 logger.Information("Available scrappers: {scrappers}"
-    , string.Join(", ", scrappers.All().Select(x=>x.GetType().FullName)));
+    , string.Join(", ", scrappers.AllScrappers().Select(x=>x.GetType().Name)));
+
+logger.Information("Available post-actions: {actions}"
+    , string.Join(", ", scrappers.AllPostActions().Select(x => x.GetType().Name)));
 
 try
 {
     var downloader = new ScrapperDownloader(driver)
-                                        .Using(scrappers.GetByName(useParam) ?? throw new NotFoundException($"{useParam} not found."))
-                                        .UsingPost(new ToThumbnail())
-                                        /*.UsingPost(new ClearExif())*/;
+        .Using(scrappers.GetByName(useParam) ?? throw new NotFoundException($"{useParam} not found."));
+
+    // add post param post actions.
+    if (postParam != null)
+        downloader.UsingPost(scrappers.GetPostActionByName(postParam));
 
 
-    logger.Information("Using: {usings}", string.Join(", ", downloader.Scrappers.Select(x=>x.GetType().Name)));
+    // show a concat of scrappers and post-scraps
+    logger.Information("Using: {usings}",
+        string.Join(", ",
+            downloader.Scrappers.Select(x => x.GetType().Name)
+                .Concat(downloader.PostScrapsActions.Select(x => x?.GetType().Name))));
+
     logger.Information("To: {dir}", Path.GetFullPath(outParam));
 
     await downloader.DownloadAsync(new ScrapperQuery(queryParam), outParam, true);

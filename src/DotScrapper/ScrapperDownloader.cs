@@ -56,12 +56,13 @@ namespace DotScrapper
             _formatManager.AddImageFormat(TgaFormat.Instance);
         }
 
-        public ScrapperDownloader(ChromiumDriver driver, IEnumerable<IScrapper> scrappers, HttpClient? client)
+        public ScrapperDownloader(ChromiumDriver driver, IEnumerable<IScrapper> scrappers, HttpClient? client, ImageFormatManager formatManager)
         {
             _logger = Log.ForContext<ScrapperDownloader>();
 
             Scrappers = new List<IScrapper>(scrappers);
             Driver = driver;
+            _formatManager = formatManager;
             _httpClient = client ?? new HttpClient(new SocketsHttpHandler()
             {
                 AllowAutoRedirect = true
@@ -73,6 +74,8 @@ namespace DotScrapper
             Queue<ScrapSource> sources = new Queue<ScrapSource>(Scrappers.SelectMany(x=>x.ScrapWithChromium(Driver, query)));
 
             uint completeCount = 0;
+
+            int startCount = sources.Count;
 
             while (sources.TryDequeue(out var currentSource))
             {
@@ -106,13 +109,20 @@ namespace DotScrapper
                         {
                             _logger.Information("Post Action: {action}", postScrapsAction?.GetType().Name);
 
-                            postScrapsAction?.Apply(image);
+                            try
+                            {
+                                postScrapsAction?.Apply(image);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.Error(ex, "Post action error.");
+                            }
 
                             await image.SaveAsync(filePath);
                         }
                     }
 
-                    _logger.Information("Download complete, next {next}", sources.Count);
+                    _logger.Information("Downloading all... {p}%", (startCount - sources.Count)* 100 / startCount);
                     completeCount++;
                 }
                 catch (Exception ex)
@@ -125,15 +135,18 @@ namespace DotScrapper
             return completeCount;
         }
 
-        public ScrapperDownloader Using(IScrapper scrapper)
+        public ScrapperDownloader Using(IScrapper? scrapper)
         {
-            Scrappers.Add(scrapper);
+            if(scrapper != null)
+                Scrappers.Add(scrapper);
             return this;
         }
 
-        public ScrapperDownloader UsingPost(IPostScrapAction postScrapAction)
+        public ScrapperDownloader UsingPost(IPostScrapAction? postScrapAction)
         {
-            PostScrapsActions.Add(postScrapAction);
+            if(postScrapAction != null)
+                PostScrapsActions.Add(postScrapAction);
+
             return this;
         }
 
