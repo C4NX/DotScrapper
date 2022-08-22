@@ -31,7 +31,7 @@ namespace DotScrapper
 
             for (var i = 0; i < args.Length; i++)
             {
-                if (!args[i].Contains('-')) 
+                if (!args[i].StartsWith('-')) 
                     continue;
 
                 var lowerKey = args[i]
@@ -47,7 +47,7 @@ namespace DotScrapper
                 {
                     refs.Add(new ArgumentDefinitionRef(argument, i
                         // It will try to get the next value for the argument if it's in range, and check if the next argument is not an argument name.
-                        , (args.Length - 1) == i ? null : args[i + 1].Contains("-") ? null : args[i + 1]));
+                        , (args.Length - 1) == i ? null : args[i + 1].StartsWith("-") ? null : args[i + 1]));
                 }
             }
 
@@ -55,8 +55,8 @@ namespace DotScrapper
             for (var i = 0; i < args.Length; i++)
             {
                 // skip if the argument is a key and he was not processed in the first-pass.
-                if(args[i].Contains('-') && refs.Exists(x => x.Index == i))
-                    continue;
+                /*if(args[i].StartsWith('-') && refs.Exists(x => x.Index == i))
+                    continue;*/
 
                 if (args[i].Contains('-') && !refs.Exists(x => x.Index == i))
                 {
