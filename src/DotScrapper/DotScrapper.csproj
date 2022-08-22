@@ -27,7 +27,7 @@
   </ItemGroup>
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Command="git describe --long &gt; .version" />
+    <Exec Command="git describe --long &gt; version.txt" />
   </Target>
 
 </Project>

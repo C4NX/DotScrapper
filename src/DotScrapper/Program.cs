@@ -16,7 +16,8 @@ await using (Stream? stream = typeof(Program).Assembly
     {
         using var reader = new StreamReader(stream);
 
-        gitVersion = reader.ReadToEnd();
+        gitVersion = reader.ReadToEnd()
+            .ReplaceLineEndings(string.Empty);
     }
 }
 
@@ -75,31 +76,45 @@ if (Arguments.HasArguments(args, "autoclean", "a"))
     }
 }
 
-EdgeDriver? driver;
+var scrappers
+    = ScrapperManager.FromAssembly(typeof(Program).Assembly);
 
-try
+ScrapperContext ctx 
+    = new(null, new HttpClient(new SocketsHttpHandler{ AllowAutoRedirect = true }));
+
+IScrapper scrapper = scrappers.GetByName(useParam) ?? throw new ArgumentException($"{useParam} not found.");
+
+// use edge chromium only if RequireChromium in that scrapper.
+if (scrapper.Definition.RequireChromium)
 {
-    var chromeDriverService = EdgeDriverService.CreateDefaultService();
-    chromeDriverService.HideCommandPromptWindow = true;
-    var edgeOptions = new EdgeOptions();
+    try
+    {
+        logger.Debug("Creating EdgeDriver...");
 
-    // -[-]hide option
-    if (!Arguments.HasArguments(args, "show", "s"))
-        edgeOptions.AddArgument("--headless");
+        var edgeDriverService = EdgeDriverService.CreateDefaultService();
+        edgeDriverService.HideCommandPromptWindow = true;
+        var edgeOptions = new EdgeOptions();
 
-    driver = new EdgeDriver(chromeDriverService, edgeOptions);
+        // -[-]hide option
+        if (!Arguments.HasArguments(args, "show", "s"))
+            edgeOptions.AddArgument("--headless");
 
-    logger.Information("Using EdgeDriver: {version}", driver.Capabilities.GetCapability("browserVersion"));
-}
-catch (DriverServiceNotFoundException ex)
-{
-    logger.Fatal(ex, "WebDriver not found.");
-    return;
-}
-catch (Exception ex)
-{
-    logger.Fatal(ex, "Unknown Error: {message}", ex.Message);
-    return;
+        var driver = new EdgeDriver(edgeDriverService, edgeOptions);
+        logger.Information("Using EdgeDriver: {version}", driver.Capabilities.GetCapability("browserVersion"));
+
+        // use that driver !
+        ctx.UseChromium(driver);
+    }
+    catch (DriverServiceNotFoundException ex)
+    {
+        logger.Fatal(ex, "WebDriver not found.");
+        return;
+    }
+    catch (Exception ex)
+    {
+        logger.Fatal(ex, "Unknown Error: {message}", ex.Message);
+        return;
+    }
 }
 
 Console.CancelKeyPress += (sender, e) =>
@@ -108,7 +123,7 @@ Console.CancelKeyPress += (sender, e) =>
 
     // using that because Selenium may try to continue the connection to that driver, and create errors, like WebDriverException.
     isLoggerEnable = false;
-    driver.Quit();
+    ctx.Dispose();
     Environment.Exit(0);
 };
 
@@ -116,19 +131,20 @@ Console.CancelKeyPress += (sender, e) =>
 if (!Directory.Exists(outParam))
     Directory.CreateDirectory(outParam);
 
-var scrappers = new ScrapperManager();
-scrappers.ScanAssembly(typeof(Program).Assembly);
-
 logger.Information("Available scrappers: {scrappers}"
-    , string.Join(", ", scrappers.AllScrappers().Select(x=>x.GetType().Name)));
+    ,
+    string.Join(", ",
+        scrappers.AllScrappers()
+            .Select(x => x.Definition.Description != null
+                ? $"{x.Definition.Name} ({x.Definition.Description})"
+                : x.Definition.Name)));
 
 logger.Information("Available post-actions: {actions}"
     , string.Join(", ", scrappers.AllPostActions().Select(x => x.GetType().Name)));
 
 try
 {
-    var downloader = new ScrapperDownloader(driver)
-        .Using(scrappers.GetByName(useParam) ?? throw new NotFoundException($"{useParam} not found."));
+    var downloader = new ScrapperDownloader(ctx, scrapper);
 
     // add post param post actions.
     if (postParam != null)
@@ -141,6 +157,8 @@ try
             downloader.Scrappers.Select(x => x.GetType().Name)
                 .Concat(downloader.PostScrapsActions.Select(x => x?.GetType().Name))));
 
+    logger.Information("Query: {query}", queryParam);
+
     logger.Information("To: {dir}", Path.GetFullPath(outParam));
 
     await downloader.DownloadAsync(new ScrapperQuery(queryParam), outParam, true);
@@ -151,5 +169,5 @@ catch (Exception ex)
 }
 finally
 {
-    driver.Quit();
+    ctx.Dispose();
 }

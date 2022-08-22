@@ -34,7 +34,7 @@ namespace DotScrapper
         public IScrapper? GetByName(string? name)
         {
             return _scrappers
-                .FirstOrDefault(x => x.GetType().Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+                .FirstOrDefault(x => x.Definition.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
         }
 
         public IPostScrapAction? GetPostActionByName(string? name)
@@ -48,5 +48,12 @@ namespace DotScrapper
 
         public IEnumerable<IPostScrapAction> AllPostActions()
             => _postScrapActions.AsEnumerable();
+
+        public static ScrapperManager FromAssembly(Assembly assembly)
+        {
+            var r = new ScrapperManager();
+            r.ScanAssembly(assembly);
+            return r;
+        }
     }
 }

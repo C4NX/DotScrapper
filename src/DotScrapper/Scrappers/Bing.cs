@@ -22,20 +22,27 @@ namespace DotScrapper.Scrappers
         /// </summary>
         public int AdultUpdateSleepTime { get; set; } = 500;
 
+        public ScrapperDefinition Definition { get; } 
+            = new("Bing", true, "Use the Bing Image service to retrieve pictures.");
+
         public Bing()
         {
             _logger = Log.Logger
                 .ForContext<Bing>();
         }
 
-        public void Initialize(ChromiumDriver driver)
+        public void Initialize(ScrapperContext ctx)
         {
             // no initialize for bing.
         }
 
-        public IEnumerable<ScrapSource> ScrapWithChromium(ChromiumDriver driver, ScrapperQuery query)
+        public IEnumerable<ScrapSource> Perform(ScrapperContext ctx, ScrapperQuery query)
         {
             var bingSearchUrl = $"https://www.bing.com/images/search?q={Uri.EscapeDataString(query.Query)}";
+
+            var driver = ctx.Driver
+                         ?? throw new ArgumentNullException(nameof(ctx),
+                             "Driver was not given in this ScrapperContext");
 
             driver.Url = bingSearchUrl;
 

@@ -13,68 +13,44 @@ namespace DotScrapper
 {
     public class ScrapperDownloader
     {
-        private readonly HttpClient _httpClient;
         private readonly ILogger _logger;
-        private readonly ImageFormatManager _formatManager;
+        private readonly ScrapperContext _context;
 
         public IList<IScrapper> Scrappers { get; init; }
-        public ChromiumDriver Driver { get; set; }
         public IList<IPostScrapAction?> PostScrapsActions { get; set; } 
             = new List<IPostScrapAction?>();
 
-        public ScrapperDownloader(ChromiumDriver driver, HttpClient? client = null)
+        public ScrapperDownloader(ScrapperContext ctx, IScrapper? scrapper = null)
         {
             _logger = Log.ForContext<ScrapperDownloader>();
 
             Scrappers = new List<IScrapper>();
-            Driver = driver;
-            _httpClient = client ?? new HttpClient(new SocketsHttpHandler()
-            {
-                AllowAutoRedirect = true
-            });
+            _context = ctx;
 
-            _formatManager = new ImageFormatManager();
-            _formatManager.AddImageFormatDetector(new PngImageFormatDetector());
-            _formatManager.AddImageFormatDetector(new BmpImageFormatDetector());
-            _formatManager.AddImageFormatDetector(new JpegImageFormatDetector());
-            _formatManager.AddImageFormatDetector(new GifImageFormatDetector());
-            _formatManager.AddImageFormatDetector(new WebpImageFormatDetector());
-            _formatManager.AddImageFormatDetector(new TgaImageFormatDetector());
-
-            _formatManager.AddImageFormat(PngFormat.Instance);
-            _formatManager.AddImageFormat(BmpFormat.Instance);
-            _formatManager.AddImageFormat(JpegFormat.Instance);
-            _formatManager.AddImageFormat(GifFormat.Instance);
-            _formatManager.AddImageFormat(WebpFormat.Instance);
-            _formatManager.AddImageFormat(TgaFormat.Instance);
+            if(scrapper != null)
+                Scrappers.Add(scrapper);
         }
 
-        public ScrapperDownloader(ChromiumDriver driver, IEnumerable<IScrapper> scrappers, HttpClient? client, ImageFormatManager formatManager)
+        public ScrapperDownloader(ScrapperContext ctx, IEnumerable<IScrapper> scrappers)
         {
             _logger = Log.ForContext<ScrapperDownloader>();
 
             Scrappers = new List<IScrapper>(scrappers);
-            Driver = driver;
-            _formatManager = formatManager;
-            _httpClient = client ?? new HttpClient(new SocketsHttpHandler()
-            {
-                AllowAutoRedirect = true
-            });
+            _context = ctx;
         }
 
         public async Task<uint> DownloadAsync(ScrapperQuery query, string outputDirectory, bool validateContent)
         {
-            Queue<ScrapSource> sources = new Queue<ScrapSource>(Scrappers.SelectMany(x=>x.ScrapWithChromium(Driver, query)));
+            Queue<ScrapSource> sources = new Queue<ScrapSource>(Scrappers.SelectMany(x=>x.Perform(_context, query)));
 
             uint completeCount = 0;
-
             int startCount = sources.Count;
 
             while (sources.TryDequeue(out var currentSource))
             {
                 try
                 {
-                    using var resp = await _httpClient.GetAsync(currentSource.Url);
+                    using var resp = await _context.Http.GetAsync(currentSource.Url);
 
                     if (!resp.IsSuccessStatusCode)
                     {
@@ -155,7 +131,7 @@ namespace DotScrapper
                 var contentType = responseMessage.Content.Headers.ContentType;
                 if (contentType != null)
                 {
-                    var imageFormat = _formatManager.FindFormatByMimeType(contentType.MediaType);
+                    var imageFormat = _context.FormatManager.FindFormatByMimeType(contentType.MediaType);
                     uriExt = imageFormat == null ? string.Empty : '.' + imageFormat.FileExtensions.First();
                 }
                 else // if no header is found, put the extension to an empty string.

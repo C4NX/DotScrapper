@@ -8,22 +8,24 @@ using OpenQA.Selenium.Chromium;
 namespace DotScrapper
 {
     /// <summary>
-    /// An interface to scrap images.
+    /// An interface to scrap.
     /// </summary>
     public interface IScrapper
     {
-        /// <summary>
-        /// Initialize that scrapper, it mostly configure the <see cref="ChromiumDriver"/>.
-        /// </summary>
-        /// <param name="driver"></param>
-        void Initialize(ChromiumDriver driver);
+        ScrapperDefinition Definition { get; }
 
         /// <summary>
-        /// Scrap images with a <see cref="ChromiumDriver"/> and a <see cref="ScrapperQuery"/>.
+        /// Initialize that scrapper with a given <see cref="ScrapperContext"/>.
         /// </summary>
-        /// <param name="driver">That <see cref="ChromiumDriver"/></param>
+        /// <param name="ctx">That <see cref="ScrapperContext"/></param>
+        void Initialize(ScrapperContext ctx);
+
+        /// <summary>
+        /// Scrap on the net with a given <see cref="ScrapperContext"/> and a <see cref="ScrapperQuery"/>.
+        /// </summary>
+        /// <param name="ctx">That <see cref="ScrapperContext"/></param>
         /// <param name="query">That <see cref="ScrapperQuery"/></param>
         /// <returns>An IEnumerable of <see cref="ScrapSource"/></returns>
-        IEnumerable<ScrapSource> ScrapWithChromium(ChromiumDriver driver, ScrapperQuery query);
+        IEnumerable<ScrapSource> Perform(ScrapperContext ctx, ScrapperQuery query);
     }
 }
