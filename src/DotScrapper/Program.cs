@@ -7,6 +7,20 @@ using Serilog.Core;
 using Serilog.Events;
 using System.Diagnostics;
 
+// get git .version created in pre-build.
+string? gitVersion = null;
+await using (Stream? stream = typeof(Program).Assembly
+                 .GetManifestResourceStream($"{typeof(IScrapper).Namespace}.version.txt"))
+{
+    if (stream != null)
+    {
+        using var reader = new StreamReader(stream);
+
+        gitVersion = reader.ReadToEnd();
+    }
+}
+
+
 // when DotScrapper exit, some logs still happen so we have that var to handle it.
 bool isLoggerEnable = true;
 LoggingLevelSwitch? loggingLevel = new LoggingLevelSwitch(Arguments.HasArguments(args,
@@ -35,7 +49,10 @@ Log.Logger = new LoggerConfiguration()
 
 var logger = Log.Logger;
 
-logger.Information("DotScrapper: {version}", typeof(Program).Assembly.GetName().Version);
+logger.Information("DotScrapper: {version}, {gitVersion}",
+    typeof(Program).Assembly.GetName()
+        .Version,
+    gitVersion ?? "<no-git-version>");
 
 // -[-]autoclean, msedgedriver cleaner.
 if (Arguments.HasArguments(args, "autoclean", "a"))
