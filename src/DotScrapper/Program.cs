@@ -35,13 +35,13 @@ await using (Stream? stream = typeof(Program).Assembly
     }
 }
 
+Console.OutputEncoding = Encoding.Unicode;
 string dotScrapperVersionString = $"DotScrapper ✂ - {typeof(Program).Assembly.GetName().Version}, {gitVersion}";
 
 ScrapperManager scrapperManager = ScrapperManager.FromAssembly(typeof(Program).Assembly);
 
 if (ARG_HELP.IsPresent())
 {
-    Console.OutputEncoding = Encoding.Unicode;
     Console.ForegroundColor = ConsoleColor.Cyan;
     Console.WriteLine(dotScrapperVersionString);
     Console.ResetColor();
@@ -73,7 +73,6 @@ if (ARG_HELPLIST.IsPresent())
 {
     var ANSI_RESET = "\u001B[0m";
 
-    Console.OutputEncoding = Encoding.Unicode;
     Console.ForegroundColor = ConsoleColor.Cyan;
     Console.WriteLine(dotScrapperVersionString);
     Console.ResetColor();
