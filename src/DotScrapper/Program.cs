@@ -7,7 +7,7 @@ using Serilog.Core;
 using Serilog.Events;
 using System.Diagnostics;
 
-// get git .version created in pre-build.
+// get version.txt created in pre-build.
 string? gitVersion = null;
 await using (Stream? stream = typeof(Program).Assembly
                  .GetManifestResourceStream($"{typeof(IScrapper).Namespace}.version.txt"))
