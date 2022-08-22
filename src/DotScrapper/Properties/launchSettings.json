@@ -2,7 +2,7 @@
   "profiles": {
     "DotScrapper": {
       "commandName": "Project",
-      "commandLineArgs": "-qova \"Adventure Time\" -use Bing"
+      "commandLineArgs": "-qo \"Adventure Time\" -use Bing"
     }
   }
 }

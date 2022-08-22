@@ -36,7 +36,7 @@ namespace DotScrapper.Scrappers
             // no initialize for bing.
         }
 
-        public IEnumerable<ScrapSource> Perform(ScrapperContext ctx, ScrapperQuery query)
+        public async IAsyncEnumerable<ScrapSource> Perform(ScrapperContext ctx, ScrapperQuery query)
         {
             var bingSearchUrl = $"https://www.bing.com/images/search?q={Uri.EscapeDataString(query.Query)}";
 
@@ -70,7 +70,7 @@ namespace DotScrapper.Scrappers
                     _logger.Information("Adult content is now enabled.");
 
                     // keep calm, that was fast.
-                    Thread.Sleep(AdultUpdateSleepTime);
+                    await Task.Delay(AdultUpdateSleepTime);
                 }
                 else
                 {
@@ -79,7 +79,7 @@ namespace DotScrapper.Scrappers
 
             }
 
-            foreach (var divElement in GetAllImages(driver))
+            foreach (var divElement in await GetAllImages(driver))
             {
                 // get json data with md5 & url.
                 var aElement = divElement.FindElement(By.ClassName("iusc"));
@@ -101,7 +101,7 @@ namespace DotScrapper.Scrappers
             }
         }
 
-        private IEnumerable<IWebElement> GetAllImages(ChromiumDriver driver)
+        private async Task<IList<IWebElement>> GetAllImages(ChromiumDriver driver)
         {
             var byImgPt = By.ClassName("imgpt");
 
@@ -132,7 +132,7 @@ namespace DotScrapper.Scrappers
                 driver.DeleteElementById("inline_cluster");
 
                 //let images data load.
-                Thread.Sleep(UpdateSleepTime);
+                await Task.Delay(UpdateSleepTime);
 
                 // update elements
                 webElements = driver.FindElements(byImgPt);

@@ -6,6 +6,18 @@ using Serilog;
 using Serilog.Core;
 using Serilog.Events;
 using System.Diagnostics;
+// ReSharper disable InconsistentNaming
+
+
+var ARG_HELP = Arguments.Add(new ("help", "h"));
+var ARG_USE = Arguments.Add(new("use", "u"));
+var ARG_OUTPUT = Arguments.Add(new("out", "o"));
+var ARG_QUERY = Arguments.Add(new("query", "q"));
+var ARG_POST_ACTION = Arguments.Add(new("post", "p"));
+var ARG_HEADLESS = Arguments.Add(new("show", "s"));
+var ARG_VERBOSE = Arguments.Add(new("verbose", "v"));
+var ARG_AUTOCLEAN = Arguments.Add(new("autoclean", "a"));
+Arguments.Default = Arguments.LoadArguments(args);
 
 // get version.txt created in pre-build.
 string? gitVersion = null;
@@ -24,22 +36,18 @@ await using (Stream? stream = typeof(Program).Assembly
 
 // when DotScrapper exit, some logs still happen so we have that var to handle it.
 bool isLoggerEnable = true;
-LoggingLevelSwitch? loggingLevel = new LoggingLevelSwitch(Arguments.HasArguments(args,
-    "verbose",
-    "v")
+LoggingLevelSwitch? loggingLevel = new LoggingLevelSwitch(ARG_VERBOSE.IsPresent()
     ? LogEventLevel.Verbose
     : LogEventLevel.Information);
 
-string? useParam = Arguments.GetArgumentData(args, "use", "u")
+string? useParam = ARG_USE.GetActualData(nameof(Bing))
                    ?? nameof(Bing);
 
-string? outParam = Arguments.GetArgumentData(args, "out", "o")
-                   ?? "Out\\";
+string? outParam = ARG_OUTPUT.GetActualData("Out\\");
 
-string? queryParam = Arguments.GetArgumentData(args, "query", "q")
-                     ?? "Cat";
+string? queryParam = ARG_QUERY.GetActualData("Cat");
 
-string? postParam = Arguments.GetArgumentData(args, "post", "p");
+string? postParam = ARG_POST_ACTION.GetActualData();
 
 Log.Logger = new LoggerConfiguration()
     .Filter.ByExcluding(x=>!isLoggerEnable)
@@ -56,7 +64,7 @@ logger.Information("DotScrapper: {version}, {gitVersion}",
     gitVersion ?? "<no-git-version>");
 
 // -[-]autoclean, msedgedriver cleaner.
-if (Arguments.HasArguments(args, "autoclean", "a"))
+if (ARG_AUTOCLEAN.IsPresent())
 {
     foreach (var item in Process.GetProcessesByName("msedgedriver"))
     {
@@ -96,7 +104,7 @@ if (scrapper.Definition.RequireChromium)
         var edgeOptions = new EdgeOptions();
 
         // -[-]hide option
-        if (!Arguments.HasArguments(args, "show", "s"))
+        if (!ARG_HEADLESS.IsPresent())
             edgeOptions.AddArgument("--headless");
 
         var driver = new EdgeDriver(edgeDriverService, edgeOptions);
@@ -161,7 +169,7 @@ try
 
     logger.Information("To: {dir}", Path.GetFullPath(outParam));
 
-    await downloader.DownloadAsync(new ScrapperQuery(queryParam), outParam, true);
+    await downloader.DownloadAsync(new ScrapperQuery(queryParam), outParam, CancellationToken.None);
 }
 catch (Exception ex)
 {

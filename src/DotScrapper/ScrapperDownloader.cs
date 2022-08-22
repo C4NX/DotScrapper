@@ -39,65 +39,74 @@ namespace DotScrapper
             _context = ctx;
         }
 
-        public async Task<uint> DownloadAsync(ScrapperQuery query, string outputDirectory, bool validateContent)
+        public async Task<uint> DownloadAsync(ScrapperQuery query, string outputDirectory, CancellationToken cancellationToken = default)
         {
-            Queue<ScrapSource> sources = new Queue<ScrapSource>(Scrappers.SelectMany(x=>x.Perform(_context, query)));
-
             uint completeCount = 0;
-            int startCount = sources.Count;
 
-            while (sources.TryDequeue(out var currentSource))
+            foreach (var scrapper in Scrappers)
             {
-                try
-                {
-                    using var resp = await _context.Http.GetAsync(currentSource.Url);
+                _logger.Information("Downloading from {name}...", scrapper.Definition.Name);
 
-                    if (!resp.IsSuccessStatusCode)
+                await Parallel.ForEachAsync(
+                    scrapper.Perform(_context, query)
+                    ,cancellationToken
+                    ,async (x, token) =>
                     {
-                        _logger.Warning("Scrapping failed for {url} (code: {code})", currentSource.Url, resp.StatusCode);
-                        continue; // skip that fail.
-                    }
-
-                    var filePath = Path.Combine(outputDirectory,
-                        GetFilenameFor(currentSource, resp));
-
-                    await using (var respStream = await resp.Content.ReadAsStreamAsync())
-                    {
-                        await using (var fStream = File.Create(filePath))
+                        try
                         {
-                            await respStream.CopyToAsync(fStream);
+                            using var resp = await _context.Http.GetAsync(x.Url, token);
+
+                            if (!resp.IsSuccessStatusCode)
+                            {
+                                _logger.Warning("Scrapping failed for {url} (code: {code})", x.Url, resp.StatusCode);
+                                
+                            }
+                            else
+                            {
+                                var filePath = Path.Combine(outputDirectory,
+                                    GetFilenameFor(x, resp));
+
+                                _logger.Verbose("[{url}] Downloading...", x.Url);
+
+                                await using (var respStream = await resp.Content.ReadAsStreamAsync(token))
+                                {
+                                    await using (var fStream = File.Create(filePath))
+                                    {
+                                        await respStream.CopyToAsync(fStream, token);
+                                    }
+                                }
+
+                                // do custom scrap actions.
+                                if (PostScrapsActions.Count > 0)
+                                {
+                                    using var image = await Image.LoadAsync(filePath, token);
+
+                                    foreach (var postScrapsAction in PostScrapsActions)
+                                    {
+                                        _logger.Information("Post Action: {action}", postScrapsAction?.GetType().Name);
+
+                                        try
+                                        {
+                                            postScrapsAction?.Apply(image);
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            _logger.Error(ex, "Post action error.");
+                                        }
+
+                                        await image.SaveAsync(filePath, cancellationToken: token);
+                                    }
+                                }
+
+                                _logger.Verbose("[{url}] Downloaded.", x.Url);
+                                completeCount++;
+                            }
                         }
-                    }
-
-                    // do custom scrap actions.
-                    if (PostScrapsActions.Count > 0)
-                    {
-                        using var image = await Image.LoadAsync(filePath);
-
-                        foreach (var postScrapsAction in PostScrapsActions)
+                        catch (Exception ex)
                         {
-                            _logger.Information("Post Action: {action}", postScrapsAction?.GetType().Name);
-
-                            try
-                            {
-                                postScrapsAction?.Apply(image);
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.Error(ex, "Post action error.");
-                            }
-
-                            await image.SaveAsync(filePath);
+                            _logger.Error(ex, "An error has occurred while downloading.");
                         }
-                    }
-
-                    _logger.Information("Downloading all... {p}%", (startCount - sources.Count) * 100 / startCount);
-                    completeCount++;
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, "An error has occurred while downloading.");
-                }
+                    });
             }
 
             _logger.Information("Downloaded {count} files in {dir}", completeCount, outputDirectory);

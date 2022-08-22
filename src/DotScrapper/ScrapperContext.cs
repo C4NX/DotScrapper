@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using OpenQA.Selenium.Chromium;
+using Serilog;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Bmp;
 using SixLabors.ImageSharp.Formats.Gif;
@@ -35,6 +36,11 @@ namespace DotScrapper
         public ImageFormatManager FormatManager { get; }
 
         /// <summary>
+        /// Get the <see cref="ILogger"/> to use (for <see cref="IScrapper"/>).
+        /// </summary>
+        public ILogger Logger { get; }
+
+        /// <summary>
         /// Create a new instance of <see cref="ScrapperContext"/>
         /// </summary>
         /// <param name="driver">The <see cref="ChromiumDriver"/> to use. It can be null.</param>
@@ -58,6 +64,8 @@ namespace DotScrapper
             FormatManager.AddImageFormat(GifFormat.Instance);
             FormatManager.AddImageFormat(WebpFormat.Instance);
             FormatManager.AddImageFormat(TgaFormat.Instance);
+
+            Logger = Log.ForContext<ScrapperContext>();
         }
 
         public void UseChromium(ChromiumDriver? driver)

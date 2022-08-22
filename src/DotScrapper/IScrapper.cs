@@ -26,6 +26,6 @@ namespace DotScrapper
         /// <param name="ctx">That <see cref="ScrapperContext"/></param>
         /// <param name="query">That <see cref="ScrapperQuery"/></param>
         /// <returns>An IEnumerable of <see cref="ScrapSource"/></returns>
-        IEnumerable<ScrapSource> Perform(ScrapperContext ctx, ScrapperQuery query);
+        IAsyncEnumerable<ScrapSource> Perform(ScrapperContext ctx, ScrapperQuery query);
     }
 }
