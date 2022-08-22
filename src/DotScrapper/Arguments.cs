@@ -146,14 +146,16 @@ namespace DotScrapper
     {
         public string Name { get; set; }
         public string? SmallName { get; set; }
+        public string? Description { get; set; }
 
-        public ArgumentDefinition(string name, string? smallName)
+        public ArgumentDefinition(string name, string? smallName, string? description = null)
         {
             if(name == null)
                 throw new ArgumentNullException(nameof(name));
 
             Name = name;
             SmallName = smallName;
+            Description = description;
         }
 
         public bool IsPresent()

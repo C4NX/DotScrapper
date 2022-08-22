@@ -6,17 +6,19 @@ using Serilog;
 using Serilog.Core;
 using Serilog.Events;
 using System.Diagnostics;
+using System.Text;
+
 // ReSharper disable InconsistentNaming
 
-
-var ARG_HELP = Arguments.Add(new ("help", "h"));
-var ARG_USE = Arguments.Add(new("use", "u"));
-var ARG_OUTPUT = Arguments.Add(new("out", "o"));
-var ARG_QUERY = Arguments.Add(new("query", "q"));
-var ARG_POST_ACTION = Arguments.Add(new("post", "p"));
-var ARG_HEADLESS = Arguments.Add(new("show", "s"));
-var ARG_VERBOSE = Arguments.Add(new("verbose", "v"));
-var ARG_AUTOCLEAN = Arguments.Add(new("autoclean", "a"));
+var ARG_HELP = Arguments.Add(new ("help", "h", "You are here."));
+var ARG_USE = Arguments.Add(new("use", "u", "Set the scraper to use."));
+var ARG_OUTPUT = Arguments.Add(new("out", "o", "Set an output path for it."));
+var ARG_QUERY = Arguments.Add(new("query", "q", "Set the query to use."));
+var ARG_POST_ACTION = Arguments.Add(new("post", "p", "Set the post-scrapping action."));
+var ARG_HEADLESS = Arguments.Add(new("show", "s", "Shows the browser window in use."));
+var ARG_VERBOSE = Arguments.Add(new("verbose", "v", "logs. but deeper..."));
+var ARG_HELPLIST = Arguments.Add(new("list", null, "Full list all scrappers/post-actions."));
+var ARG_AUTOCLEAN = Arguments.Add(new("autoclean", "a", "Auto kill all still-running web driver (to remove)"));
 Arguments.Default = Arguments.LoadArguments(args);
 
 // get version.txt created in pre-build.
@@ -31,6 +33,65 @@ await using (Stream? stream = typeof(Program).Assembly
         gitVersion = reader.ReadToEnd()
             .ReplaceLineEndings(string.Empty);
     }
+}
+
+string dotScrapperVersionString = $"DotScrapper ✂ - {typeof(Program).Assembly.GetName().Version}, {gitVersion}";
+
+ScrapperManager scrapperManager = ScrapperManager.FromAssembly(typeof(Program).Assembly);
+
+if (ARG_HELP.IsPresent())
+{
+    Console.OutputEncoding = Encoding.Unicode;
+    Console.ForegroundColor = ConsoleColor.Cyan;
+    Console.WriteLine(dotScrapperVersionString);
+    Console.ResetColor();
+    Console.WriteLine("Basic Usage:");
+    Console.WriteLine("\t./DotScrapper -q <query> -u <service> -o <out>");
+    Console.WriteLine("\tTo learn more about it, please watch the documentation on github.");
+    Console.WriteLine("Arguments: ");
+    Console.ForegroundColor = ConsoleColor.DarkGray;
+    Console.WriteLine("\t"+string.Join($"{Environment.NewLine}\t", Arguments.GetEnumerable().Select(x=>$"{x.Name}{(x.SmallName != null ? "|"+x.SmallName : string.Empty)}{(x.Description != null ? $" - {x.Description}" : string.Empty)}")));
+    Console.ResetColor();
+    Console.WriteLine($"Scrappers:");
+    Console.ForegroundColor = ConsoleColor.DarkGreen;
+    Console.WriteLine($"\t{string.Join(", ", scrapperManager.AllScrappers().Select(x => x.Definition.Name))}");
+    Console.ResetColor();
+    Console.WriteLine($"Post-Actions:");
+    Console.ForegroundColor = ConsoleColor.DarkGreen;
+    Console.WriteLine($"\t{string.Join(", ", scrapperManager.AllPostActions().Select(x => x.GetType().Name))}");
+    Console.ResetColor();
+    Console.WriteLine("Contribute:");
+    Console.ForegroundColor = ConsoleColor.Blue;
+    Console.WriteLine("\thttps://github.com/C4NX/DotScrapper");
+    Console.ResetColor();
+    Console.WriteLine();
+    Console.WriteLine("Made with ❤ by NX.");
+    return;
+}
+
+if (ARG_HELPLIST.IsPresent())
+{
+    var ANSI_RESET = "\u001B[0m";
+
+    Console.OutputEncoding = Encoding.Unicode;
+    Console.ForegroundColor = ConsoleColor.Cyan;
+    Console.WriteLine(dotScrapperVersionString);
+    Console.ResetColor();
+    Console.WriteLine($"Scrappers:");
+    Console.ForegroundColor = ConsoleColor.DarkYellow;
+    foreach (var x in scrapperManager.AllScrappers())
+        Console.WriteLine($"\t{(x.Definition.RequireChromium ? "[WD 🔎]" : "       ")} {ANSI_RESET}{x.Definition.Name} - {x.Definition.Description ?? "<no-description>"}");
+    Console.ResetColor();
+    Console.WriteLine($"Post-Actions:");
+    Console.ForegroundColor = ConsoleColor.Green;
+    Console.WriteLine($"\t{string.Join(", ", scrapperManager.AllPostActions().Select(x=>x.GetType().Name))}");
+    Console.ResetColor();
+    Console.WriteLine("Assemblies:");
+    Console.ForegroundColor = ConsoleColor.DarkGray;
+    foreach (var x in AppDomain.CurrentDomain.GetAssemblies())
+        Console.WriteLine($"\t{x.FullName}");
+    Console.ResetColor();
+    return;
 }
 
 
@@ -58,10 +119,7 @@ Log.Logger = new LoggerConfiguration()
 
 var logger = Log.Logger;
 
-logger.Information("DotScrapper: {version}, {gitVersion}",
-    typeof(Program).Assembly.GetName()
-        .Version,
-    gitVersion ?? "<no-git-version>");
+logger.Information(dotScrapperVersionString);
 
 // -[-]autoclean, msedgedriver cleaner.
 if (ARG_AUTOCLEAN.IsPresent())
@@ -84,13 +142,10 @@ if (ARG_AUTOCLEAN.IsPresent())
     }
 }
 
-var scrappers
-    = ScrapperManager.FromAssembly(typeof(Program).Assembly);
-
 ScrapperContext ctx 
     = new(null, new HttpClient(new SocketsHttpHandler{ AllowAutoRedirect = true }));
 
-IScrapper scrapper = scrappers.GetByName(useParam) ?? throw new ArgumentException($"{useParam} not found.");
+IScrapper scrapper = scrapperManager.GetByName(useParam) ?? throw new ArgumentException($"{useParam} not found.");
 
 // use edge chromium only if RequireChromium in that scrapper.
 if (scrapper.Definition.RequireChromium)
@@ -142,13 +197,13 @@ if (!Directory.Exists(outParam))
 logger.Information("Available scrappers: {scrappers}"
     ,
     string.Join(", ",
-        scrappers.AllScrappers()
+        scrapperManager.AllScrappers()
             .Select(x => x.Definition.Description != null
                 ? $"{x.Definition.Name} ({x.Definition.Description})"
                 : x.Definition.Name)));
 
 logger.Information("Available post-actions: {actions}"
-    , string.Join(", ", scrappers.AllPostActions().Select(x => x.GetType().Name)));
+    , string.Join(", ", scrapperManager.AllPostActions().Select(x => x.GetType().Name)));
 
 try
 {
@@ -156,7 +211,7 @@ try
 
     // add post param post actions.
     if (postParam != null)
-        downloader.UsingPost(scrappers.GetPostActionByName(postParam));
+        downloader.UsingPost(scrapperManager.GetPostActionByName(postParam));
 
 
     // show a concat of scrappers and post-scraps
