@@ -1,4 +1,5 @@
-﻿using DotScrapper;
+﻿using System.Collections;
+using DotScrapper;
 using DotScrapper.Scrappers;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Edge;
@@ -145,10 +146,26 @@ if (ARG_AUTOCLEAN.IsPresent())
 ScrapperContext ctx 
     = new(null, new HttpClient(new SocketsHttpHandler{ AllowAutoRedirect = true }));
 
-IScrapper scrapper = scrapperManager.GetByName(useParam) ?? throw new ArgumentException($"{useParam} not found.");
+IList<IScrapper> scrappers = new List<IScrapper>(
+    useParam.Split(',', StringSplitOptions.RemoveEmptyEntries)
+    .Select(x =>
+    {
+        var scrapperName = x.Trim();
+        var r = scrapperManager.GetByName(scrapperName);
+        if(r == null)
+            logger.Warning("Scrapper '{scrapperName}' does not exist.", scrapperName);
+        return r;
+    })
+    .Where(x => x != null)!);
+
+if (scrappers.Count == 0)
+{
+    logger.Error("No scrapper was provided, please use -u(se) <scrapper>.");
+    return;
+}
 
 // use edge chromium only if RequireChromium in that scrapper.
-if (scrapper.Definition.RequireChromium)
+if (scrappers.Any(x=>x.Definition.RequireChromium))
 {
     try
     {
@@ -205,7 +222,8 @@ logger.Information("Available post-actions: {actions}"
 
 try
 {
-    var downloader = new ScrapperDownloader(ctx, scrapper);
+    var downloader = new ScrapperDownloader(ctx)
+        .Using(scrappers);
 
     // add post param post actions.
     if (postParam != null)

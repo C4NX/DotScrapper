@@ -120,6 +120,13 @@ namespace DotScrapper
             return this;
         }
 
+        public ScrapperDownloader Using(IEnumerable<IScrapper>? scrappers)
+        {
+            if (scrappers != null)
+                foreach (var scrapper in scrappers)
+                    Scrappers.Add(scrapper);
+            return this;
+        }
         public ScrapperDownloader UsingPost(IPostScrapAction? postScrapAction)
         {
             if(postScrapAction != null)
