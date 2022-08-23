@@ -79,7 +79,7 @@ namespace DotScrapper.Scrappers
 
             }
 
-            foreach (var divElement in await GetAllImages(driver))
+            foreach (var divElement in await GetAllImages(driver, query.MaxResults))
             {
                 // get json data with md5 & url.
                 var aElement = divElement.FindElement(By.ClassName("iusc"));
@@ -93,7 +93,7 @@ namespace DotScrapper.Scrappers
 
                     if (md5 != null)
                     {
-                        _logger.Information("Found: {src}", murl);
+                        _logger.Debug("Found: {src}", murl);
 
                         yield return new ScrapSource(murl!, this, md5);
                     }
@@ -101,7 +101,7 @@ namespace DotScrapper.Scrappers
             }
         }
 
-        private async Task<IList<IWebElement>> GetAllImages(ChromiumDriver driver)
+        private async Task<IList<IWebElement>> GetAllImages(ChromiumDriver driver, int? maxResults)
         {
             var byImgPt = By.ClassName("imgpt");
 
@@ -112,6 +112,7 @@ namespace DotScrapper.Scrappers
             int? lastAdded = null;
             while (lastAdded != 0)
             {
+
                 int wasAdded = 0;
                 foreach (var x in webElements)
                 {
@@ -119,6 +120,13 @@ namespace DotScrapper.Scrappers
                     {
                         imagesElements.Add(x);
                         wasAdded++;
+
+                        // if there are more element in the imagesElement that the maxResults, end.
+                        if (imagesElements.Count >= maxResults)
+                        {
+                            wasAdded = 0; // tell: no more images.
+                            break;
+                        }
                     }
                 }
                 lastAdded = wasAdded;

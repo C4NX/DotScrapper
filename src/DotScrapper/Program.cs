@@ -14,6 +14,7 @@ var ARG_HELP = Arguments.Add(new ("help", "h", "You are here."));
 var ARG_USE = Arguments.Add(new("use", "u", "Set the scraper to use."));
 var ARG_OUTPUT = Arguments.Add(new("out", "o", "Set an output path for it."));
 var ARG_QUERY = Arguments.Add(new("query", "q", "Set the query to use."));
+var ARG_QUERY_MAX = Arguments.Add(new("max", "m", "Set the maximum number of images to get."));
 var ARG_POST_ACTION = Arguments.Add(new("post", "p", "Set the post-scrapping action."));
 var ARG_HEADLESS = Arguments.Add(new("show", "s", "Shows the browser window in use."));
 var ARG_VERBOSE = Arguments.Add(new("verbose", "v", "logs. but deeper..."));
@@ -191,15 +192,13 @@ Console.CancelKeyPress += (sender, e) =>
 
 
 if (!Directory.Exists(outParam))
-    Directory.CreateDirectory(outParam);
+    Directory.CreateDirectory(outParam!);
 
 logger.Information("Available scrappers: {scrappers}"
     ,
     string.Join(", ",
         scrapperManager.AllScrappers()
-            .Select(x => x.Definition.Description != null
-                ? $"{x.Definition.Name} ({x.Definition.Description})"
-                : x.Definition.Name)));
+            .Select(x => x.Definition.Name)));
 
 logger.Information("Available post-actions: {actions}"
     , string.Join(", ", scrapperManager.AllPostActions().Select(x => x.GetType().Name)));
@@ -223,7 +222,7 @@ try
 
     logger.Information("To: {dir}", Path.GetFullPath(outParam));
 
-    await downloader.DownloadAsync(new ScrapperQuery(queryParam), outParam, CancellationToken.None);
+    await downloader.DownloadAsync(new ScrapperQuery(queryParam, ARG_QUERY_MAX.IsPresent() ? int.Parse(ARG_QUERY_MAX.GetActualData(int.MaxValue.ToString())) : null), outParam, CancellationToken.None);
 }
 catch (Exception ex)
 {
