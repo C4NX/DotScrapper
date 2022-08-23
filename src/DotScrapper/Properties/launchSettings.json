@@ -2,7 +2,7 @@
   "profiles": {
     "DotScrapper": {
       "commandName": "Project",
-      "commandLineArgs": "-qov \"The Owl House fan art\" -u Bing -m 3"
+      "commandLineArgs": "-use \"Bing,Google\" -max 4 -qox TOH"
     }
   }
 }

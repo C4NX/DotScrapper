@@ -7,12 +7,14 @@ using Serilog;
 using Serilog.Core;
 using Serilog.Events;
 using System.Diagnostics;
+using System.IO.Compression;
 using System.Text;
 
 // ReSharper disable InconsistentNaming
 
 var ARG_HELP = Arguments.Add(new ("help", "h", "You are here."));
 var ARG_USE = Arguments.Add(new("use", "u", "Set the scraper to use."));
+var ARG_COMPRESS = Arguments.Add(new("compress", "x", "Compress the output folder to a zip."));
 var ARG_OUTPUT = Arguments.Add(new("out", "o", "Set an output path for it."));
 var ARG_QUERY = Arguments.Add(new("query", "q", "Set the query to use."));
 var ARG_QUERY_MAX = Arguments.Add(new("max", "m", "Set the maximum number of images to get."));
@@ -248,5 +250,23 @@ catch (Exception ex)
 }
 finally
 {
+    if (outParam != null)
+    {
+        try
+        {
+            var zipFilename = outParam + ".zip";
+            if (File.Exists(zipFilename))
+                File.Delete(zipFilename);
+
+            ZipFile.CreateFromDirectory(outParam, zipFilename);
+            logger.Information("Created ZIP: {fn}.", zipFilename);
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "Zip error.");
+        }
+
+    }
+
     ctx.Dispose();
 }
