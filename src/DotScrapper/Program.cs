@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using DotScrapper;
+﻿using DotScrapper;
 using DotScrapper.Scrappers;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Edge;
@@ -8,8 +7,8 @@ using Serilog.Core;
 using Serilog.Events;
 using System.Diagnostics;
 using System.IO.Compression;
+using System.Net;
 using System.Text;
-
 // ReSharper disable InconsistentNaming
 
 var ARG_HELP = Arguments.Add(new ("help", "h", "You are here."));
@@ -22,6 +21,7 @@ var ARG_POST_ACTION = Arguments.Add(new("post", "p", "Set the post-scrapping act
 var ARG_HEADLESS = Arguments.Add(new("show", "s", "Shows the browser window in use."));
 var ARG_VERBOSE = Arguments.Add(new("verbose", "v", "logs. but deeper..."));
 var ARG_HELPLIST = Arguments.Add(new("list", null, "Full list all scrappers/post-actions."));
+var ARG_PROXY = Arguments.Add(new("proxy", null, "Tell all requests to pass on a proxy."));
 var ARG_AUTOCLEAN = Arguments.Add(new("autoclean", "a", "Auto kill all still-running web driver (to remove)"));
 Arguments.Default = Arguments.LoadArguments(args);
 
@@ -124,6 +124,17 @@ var logger = Log.Logger;
 
 logger.Information(dotScrapperVersionString);
 
+// proxy
+if (ARG_PROXY.IsPresent())
+{
+    var proxyString = ARG_PROXY.GetActualData();
+    HttpClient.DefaultProxy =
+        new WebProxy(ARG_PROXY.GetActualData() ?? throw new ArgumentException("No 'proxy' data argument"));
+
+    logger.Information("Set proxy to: {url}", proxyString);
+}
+
+
 // -[-]autoclean, msedgedriver cleaner.
 if (ARG_AUTOCLEAN.IsPresent())
 {
@@ -176,6 +187,17 @@ if (scrappers.Any(x=>x.Definition.RequireChromium))
         var edgeDriverService = EdgeDriverService.CreateDefaultService();
         edgeDriverService.HideCommandPromptWindow = true;
         var edgeOptions = new EdgeOptions();
+
+        if (ARG_PROXY.IsPresent())
+        {
+            var proxyString = ARG_PROXY.GetActualData();
+            edgeOptions.Proxy = new Proxy
+            {
+                IsAutoDetect = false,
+                Kind = ProxyKind.Manual,
+                HttpProxy = proxyString
+            };
+        }
 
         // -[-]hide option
         if (!ARG_HEADLESS.IsPresent())
