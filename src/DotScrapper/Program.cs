@@ -11,6 +11,8 @@ using System.Net;
 using System.Text;
 // ReSharper disable InconsistentNaming
 
+const string NullStr = "<null>";
+
 var ARG_HELP = Arguments.Add(new ("help", "h", "You are here."));
 var ARG_USE = Arguments.Add(new("use", "u", "Set the scraper to use."));
 var ARG_COMPRESS = Arguments.Add(new("compress", "x", "Compress the output folder to a zip."));
@@ -260,11 +262,15 @@ try
             downloader.Scrappers.Select(x => x.GetType().Name)
                 .Concat(downloader.PostScrapsActions.Select(x => x?.GetType().Name))));
 
-    logger.Information("Query: {query}", queryParam);
+    logger.Information("Query: {query}", queryParam ?? NullStr);
+    logger.Information("To: {dir}", Path.GetFullPath(outParam ?? NullStr));
 
-    logger.Information("To: {dir}", Path.GetFullPath(outParam));
-
-    await downloader.DownloadAsync(new ScrapperQuery(queryParam, ARG_QUERY_MAX.IsPresent() ? int.Parse(ARG_QUERY_MAX.GetActualData(int.MaxValue.ToString())) : null), outParam, CancellationToken.None);
+    await downloader.DownloadAsync(new ScrapperQuery(queryParam 
+                                                     ?? NullStr
+        , ARG_QUERY_MAX.IsPresent() 
+            ? int.Parse(ARG_QUERY_MAX.GetActualData(int.MaxValue.ToString())!) 
+            : null)
+        , outParam ?? "Out\\", CancellationToken.None);
 }
 catch (Exception ex)
 {

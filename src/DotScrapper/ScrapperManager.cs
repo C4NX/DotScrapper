@@ -24,10 +24,12 @@ namespace DotScrapper
             {
                 if(typeof(IScrapper).IsAssignableFrom(exportedType)
                    && exportedType != typeof(IScrapper))
-                    _scrappers.Add((IScrapper)(Activator.CreateInstance(exportedType) ?? throw new NullReferenceException("CreateInstance --> Null")));
+                    _scrappers.Add((IScrapper)(Activator.CreateInstance(exportedType) 
+                                               ?? throw new NullReferenceException("CreateInstance --> Null")));
                 else if (typeof(IPostScrapAction).IsAssignableFrom(exportedType)
                          && exportedType != typeof(IPostScrapAction))
-                    _postScrapActions.Add((IPostScrapAction)(Activator.CreateInstance(exportedType) ?? throw new NullReferenceException("CreateInstance --> Null")));
+                    _postScrapActions.Add((IPostScrapAction)(Activator.CreateInstance(exportedType) 
+                                                             ?? throw new NullReferenceException("CreateInstance --> Null")));
             }
         }
 

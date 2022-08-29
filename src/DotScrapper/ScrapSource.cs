@@ -11,21 +11,15 @@ namespace DotScrapper
     /// </summary>
     public class ScrapSource
     {
-        private readonly string _url;
-        private readonly IScrapper _scrapper;
-        private readonly string? _md5;
-
         /// <summary>
         /// Get the <see cref="ScrapSource"/> file url.
         /// </summary>
-        public string Url
-            => _url;
+        public string Url { get; }
 
         /// <summary>
         /// Get the <see cref="IScrapper"/> who have created this instance.
         /// </summary>
-        public IScrapper Scrapper
-            => _scrapper;
+        public IScrapper Scrapper { get; }
 
         /// <summary>
         /// Get the md5 hash or null.
@@ -40,8 +34,8 @@ namespace DotScrapper
         /// <param name="md5">The MD5 hash of the file.</param>
         public ScrapSource(string url, IScrapper scrapper, string? md5 = null)
         {
-            _url = url;
-            _scrapper = scrapper;
+            Url = url;
+            Scrapper = scrapper;
             Md5 = md5;
         }
     }
