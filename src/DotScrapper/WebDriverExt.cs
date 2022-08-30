@@ -33,7 +33,7 @@ namespace DotScrapper
             }
             catch (NotFoundException e)
             {
-                Log.Verbose($"Element not found: {e.Message}");
+                Log.Verbose($"Element not found: {by.Criteria}");
                 return null;
             }
         }
