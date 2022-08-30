@@ -20,7 +20,7 @@ namespace DotScrapper
             }
             catch (Exception ex)
             {
-                Log.Verbose(ex, $"JS Script Error: {ex.Message}");
+                Log.Verbose(ex, $"JS Script Error");
                 return null;
             }
         }
@@ -31,9 +31,22 @@ namespace DotScrapper
             {
                 return driver.FindElement(by);
             }
-            catch (NotFoundException e)
+            catch (NotFoundException)
             {
-                Log.Verbose($"Element not found: {by.Criteria}");
+                Log.Verbose("Element not found: {Criteria}", by.Criteria);
+                return null;
+            }
+        }
+        
+        public static IWebElement? FindElementOrNull(this IWebElement elmt, By by)
+        {
+            try
+            {
+                return elmt.FindElement(by);
+            }
+            catch (NotFoundException)
+            {
+                Log.Verbose("Element not found: {Criteria}", by.Criteria);
                 return null;
             }
         }

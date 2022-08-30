@@ -212,13 +212,16 @@ namespace DotScrapper
                 Console.ForegroundColor = ConsoleColor.DarkGray;
                 Console.WriteLine("\t"+string.Join($"{Environment.NewLine}\t", Arguments.GetEnumerable().Select(x=>$"{x.Name}{(x.SmallName != null ? "|"+x.SmallName : string.Empty)}{(x.Description != null ? $" - {x.Description}" : string.Empty)}")));
                 Console.ResetColor();
-                Console.WriteLine($"Scrappers:");
-                Console.ForegroundColor = ConsoleColor.DarkGreen;
-                Console.WriteLine($"\t{string.Join(", ", ScrapperRegister.AllScrappers().Select(x => x.Definition.Name))}");
-                Console.ResetColor();
-                Console.WriteLine($"Post-Actions:");
-                Console.ForegroundColor = ConsoleColor.DarkGreen;
-                Console.WriteLine($"\t{string.Join(", ", ScrapperRegister.AllPostActions().Select(x => x.GetType().Name))}");
+                if (ScrapperRegister != null)
+                {
+                    Console.WriteLine($"Scrappers:");
+                    Console.ForegroundColor = ConsoleColor.DarkGreen;
+                    Console.WriteLine($"\t{string.Join(", ", ScrapperRegister.AllScrappers().Select(x => x.Definition.Name))}");
+                    Console.ResetColor();
+                    Console.WriteLine($"Post-Actions:");
+                    Console.ForegroundColor = ConsoleColor.DarkGreen;
+                    Console.WriteLine($"\t{string.Join(", ", ScrapperRegister.AllPostActions().Select(x => x.GetType().Name))}");
+                }
                 Console.ResetColor();
                 Console.WriteLine("Contribute:");
                 Console.ForegroundColor = ConsoleColor.Blue;
@@ -241,15 +244,18 @@ namespace DotScrapper
                 Console.ForegroundColor = ConsoleColor.Cyan;
                 Console.WriteLine(VersionString);
                 Console.ResetColor();
-                Console.WriteLine($"Scrappers:");
-                Console.ForegroundColor = ConsoleColor.DarkYellow;
-                foreach (var x in ScrapperRegister.AllScrappers())
-                    Console.WriteLine($"\t{(x.Definition.RequireChromium ? "[WD 🔎]" : "       ")} {ANSI_RESET}{x.Definition.Name} - {x.Definition.Description ?? "<no-description>"}");
-                Console.ResetColor();
-                Console.WriteLine($"Post-Actions:");
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"\t{string.Join(", ", ScrapperRegister.AllPostActions().Select(x=>x.GetType().Name))}");
-                Console.ResetColor();
+                if (ScrapperRegister != null)
+                {
+                    Console.WriteLine($"Scrappers:");
+                    Console.ForegroundColor = ConsoleColor.DarkYellow;
+                    foreach (var x in ScrapperRegister.AllScrappers())
+                        Console.WriteLine($"\t{(x.Definition.RequireChromium ? "[WD 🔎]" : "       ")} {ANSI_RESET}{x.Definition.Name} - {x.Definition.Description ?? "<no-description>"}");
+                    Console.ResetColor();
+                    Console.WriteLine($"Post-Actions:");
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"\t{string.Join(", ", ScrapperRegister.AllPostActions().Select(x=>x.GetType().Name))}");
+                    Console.ResetColor();
+                }
                 Console.WriteLine("Assemblies:");
                 Console.ForegroundColor = ConsoleColor.DarkGray;
                 foreach (var x in AppDomain.CurrentDomain.GetAssemblies())
@@ -339,8 +345,7 @@ namespace DotScrapper
             {
                 var chromeDriverService = ChromeDriverService.CreateDefaultService();
                 chromeDriverService.HideCommandPromptWindow = true;
-                chromeDriverService.EnableVerboseLogging = hasVerboseLog;
-                
+
                 var chromeOptions = new ChromeOptions();
                 if (ArgumentProxy != null && ArgumentProxy.IsPresent())
                 {
@@ -378,7 +383,6 @@ namespace DotScrapper
                 var edgeDriverService = EdgeDriverService.CreateDefaultService();
 
                 edgeDriverService.HideCommandPromptWindow = true;
-                edgeDriverService.EnableVerboseLogging = hasVerboseLog;
                 var edgeOptions = new EdgeOptions();
 
                 if (ArgumentProxy != null && ArgumentProxy.IsPresent())
@@ -419,6 +423,9 @@ namespace DotScrapper
         
         static void LogPostInformation()
         {
+            if (ScrapperRegister == null) 
+                return;
+            
             Logger.Information("Available scrappers: {Scrappers}"
                 ,
                 string.Join(", ",
@@ -433,7 +440,9 @@ namespace DotScrapper
             => $"DotScrapper ✂ - {typeof(Program).Assembly.GetName().Version}, {BuildInGit.GetBuildInGitVersion() ?? NullStr}";
 
         static IList<IScrapper> GetScrappersArgument()
-            => new List<IScrapper>(
+            => ScrapperRegister == null 
+                ? new List<IScrapper>()
+                : new List<IScrapper>(
                 ArgumentUse?.GetActualData(String.Empty)!.Split(',', StringSplitOptions.RemoveEmptyEntries)
                     .Select(x =>
                     {

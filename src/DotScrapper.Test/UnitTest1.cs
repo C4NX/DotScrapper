@@ -16,7 +16,7 @@ namespace DotScrapper.Test
 {
     public class Tests
     {
-        public static ChromiumDriver driver;
+        public static ChromiumDriver? driver;
 
         [SetUp]
         public void Setup()

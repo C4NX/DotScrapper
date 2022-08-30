@@ -39,6 +39,8 @@ namespace DotScrapper
         /// Get the <see cref="ILogger"/> to use (for <see cref="IScrapper"/>).
         /// </summary>
         public ILogger Logger { get; }
+        
+        public Random Random { get; }
 
         /// <summary>
         /// Create a new instance of <see cref="ScrapperContext"/>
@@ -49,7 +51,8 @@ namespace DotScrapper
         {
             Driver = driver;
             Http = http;
-
+            Random = new Random();
+            
             FormatManager = new ImageFormatManager();
             FormatManager.AddImageFormatDetector(new PngImageFormatDetector());
             FormatManager.AddImageFormatDetector(new BmpImageFormatDetector());

@@ -52,6 +52,9 @@ namespace DotScrapper
                     ,cancellationToken
                     ,async (x, token) =>
                     {
+                        if (x.Url == null)
+                            return;
+                        
                         try
                         {
                             using var resp = await _context.Http.GetAsync(x.Url, token);
@@ -137,6 +140,9 @@ namespace DotScrapper
 
         private string GetFilenameFor(ScrapSource source, HttpResponseMessage responseMessage)
         {
+            if (source.Url == null)
+                throw new ArgumentNullException(nameof(source.Url));
+            
             //get the extension relative to the local path.
             string localPath = new Uri(source.Url).LocalPath;
             string uriExt = Path.GetExtension(localPath);

@@ -2,7 +2,7 @@
   "profiles": {
     "DotScrapper": {
       "commandName": "Project",
-      "commandLineArgs": "-use \"Bing,Google\" -max 4 -qox \"The Owl House\""
+      "commandLineArgs": "-use \"Furaffinity\" -max 4 -qoxv \"zeraora\""
     }
   }
 }

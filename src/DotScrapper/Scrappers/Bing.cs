@@ -23,7 +23,7 @@ namespace DotScrapper.Scrappers
         public int AdultUpdateSleepTime { get; set; } = 500;
 
         public ScrapperDefinition Definition { get; } 
-            = new("Bing", true, "Use the Bing Image service to retrieve pictures.");
+            = new("Bing", true, "Use the bing image service.");
 
         public Bing()
         {
@@ -67,14 +67,14 @@ namespace DotScrapper.Scrappers
                     driver.FindElementOrNull(By.Id("adlt_confirm"))?.Click();
 
                     driver.Url = bingSearchUrl;
-                    _logger.Information("Adult content is now enabled.");
+                    _logger.Information("Adult content is now enabled");
 
                     // keep calm, that was fast.
                     await Task.Delay(AdultUpdateSleepTime);
                 }
                 else
                 {
-                    _logger.Error("Failed to enable adult content.");
+                    _logger.Error("Failed to enable adult content");
                 }
 
             }
