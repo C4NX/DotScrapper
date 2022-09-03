@@ -9,7 +9,7 @@ namespace DotScrapper.Scrappers
     public class ThrowException : IScrapper
     {
         public ScrapperDefinition Definition { get; }
-            = new ("ThrowException", false, "DO NOT USE.");
+            = new ("ThrowException", ScrapperDefFlag.RequireChromium, "DO NOT USE.");
         public void Initialize(ScrapperContext ctx)
         {
             throw new NotImplementedException();

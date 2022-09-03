@@ -2,7 +2,7 @@
   "profiles": {
     "DotScrapper": {
       "commandName": "Project",
-      "commandLineArgs": "-use \"Furaffinity\" -max 4 -qoxv \"zeraora\""
+      "commandLineArgs": "-uv \"Furaffinity\" -qo \"wallpaper\" -max 100"
     }
   }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using DotScrapper.Viewing;
 using OpenQA.Selenium.Chromium;
 using Serilog;
 using SixLabors.ImageSharp.Formats;
@@ -18,7 +19,7 @@ namespace DotScrapper
     /// <summary>
     /// An instance contains everything that can make the scrapper work.
     /// </summary>
-    public class ScrapperContext : IDisposable
+    public class ScrapperContext
     {
         /// <summary>
         /// Get the <see cref="ChromiumDriver"/> to use,it can be null.
@@ -72,9 +73,22 @@ namespace DotScrapper
         }
 
         public void UseChromium(ChromiumDriver? driver)
-            => Driver = driver;
+        {
+            Driver = driver;
+        }
 
-        public void Dispose()
+        public IWebViewer CreateViewer(ScrapperDefinition def)
+        {
+            if (Driver != null && def.Flags.HasFlag(ScrapperDefFlag.RequireChromium))
+                return new ChromiumWebViewer(Driver);
+            if (def.Flags.HasFlag(ScrapperDefFlag.RequireHap))
+                return new HtmlBasedWebViewer(this);
+
+            Logger.Warning("{Name} does not contains a viewer require flag, default was used", def.Name);
+            return new HtmlBasedWebViewer(this);
+        }
+
+        public void DisposeContext()
         {
             Driver?.Dispose();
             Http.Dispose();

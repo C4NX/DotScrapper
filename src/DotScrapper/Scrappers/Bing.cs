@@ -2,7 +2,8 @@
 using OpenQA.Selenium.Chromium;
 using Serilog;
 using System.Text.Json;
-using OpenQA.Selenium.Interactions;
+
+//TODO: Rework with viewing classes. 
 
 namespace DotScrapper.Scrappers
 {
@@ -23,7 +24,7 @@ namespace DotScrapper.Scrappers
         public int AdultUpdateSleepTime { get; set; } = 500;
 
         public ScrapperDefinition Definition { get; } 
-            = new("Bing", true, "Use the bing image service.");
+            = new("Bing", ScrapperDefFlag.RequireChromium, "Use the bing image service.");
 
         public Bing()
         {

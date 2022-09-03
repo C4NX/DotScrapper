@@ -25,7 +25,7 @@ namespace DotScrapper
             }
         }
 
-        public static IWebElement? FindElementOrNull(this WebDriver driver, By by)
+        public static IWebElement? FindElementOrNull(this WebDriver? driver, By by)
         {
             try
             {

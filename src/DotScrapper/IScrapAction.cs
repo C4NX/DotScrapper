@@ -8,10 +8,10 @@ using SixLabors.ImageSharp;
 namespace DotScrapper
 {
     /// <summary>
-    /// An interface to apply post actions to an sixlabors image.
+    /// An interface for applying action to a <see cref="ActionContext"/>.
     /// </summary>
-    public interface IPostScrapAction
+    public interface IScrapAction
     {
-        void Apply(Image image);
+        Task Apply(ActionContext ctx);
     }
 }

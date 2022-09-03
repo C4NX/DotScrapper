@@ -8,10 +8,12 @@ using SixLabors.ImageSharp.Metadata;
 
 namespace DotScrapper.Actions
 {
-    public class ClearExif : IPostScrapAction
+    public class ClearExif : IScrapAction
     {
-        public void Apply(Image image)
+        public async Task Apply(ActionContext ctx)
         {
+            using var image = await ctx.RequireImageAsync();
+
             if (image.Metadata.ExifProfile == null) return;
 
             foreach (var exifProfileValue in image.Metadata.ExifProfile.Values

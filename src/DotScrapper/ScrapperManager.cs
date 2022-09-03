@@ -1,22 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Reflection;
 
 namespace DotScrapper
 {
     public class ScrapperManager
     {
         private readonly List<IScrapper> _scrappers = new();
-        private readonly List<IPostScrapAction> _postScrapActions = new();
+        private readonly List<IScrapAction> _postScrapActions = new();
 
         public void Add(IScrapper scrapper)
             => _scrappers.Add(scrapper);
 
-        public void Add(IPostScrapAction postScrapAction)
-            => _postScrapActions.Add(postScrapAction);
+        public void Add(IScrapAction scrapAction)
+            => _postScrapActions.Add(scrapAction);
 
         public void ScanAssembly(Assembly assembly)
         {
@@ -26,9 +21,9 @@ namespace DotScrapper
                    && exportedType != typeof(IScrapper))
                     _scrappers.Add((IScrapper)(Activator.CreateInstance(exportedType) 
                                                ?? throw new NullReferenceException("CreateInstance --> Null")));
-                else if (typeof(IPostScrapAction).IsAssignableFrom(exportedType)
-                         && exportedType != typeof(IPostScrapAction))
-                    _postScrapActions.Add((IPostScrapAction)(Activator.CreateInstance(exportedType) 
+                else if (typeof(IScrapAction).IsAssignableFrom(exportedType)
+                         && exportedType != typeof(IScrapAction))
+                    _postScrapActions.Add((IScrapAction)(Activator.CreateInstance(exportedType) 
                                                              ?? throw new NullReferenceException("CreateInstance --> Null")));
             }
         }
@@ -39,7 +34,7 @@ namespace DotScrapper
                 .FirstOrDefault(x => x.Definition.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
         }
 
-        public IPostScrapAction? GetPostActionByName(string? name)
+        public IScrapAction? GetActionByName(string? name)
         {
             return _postScrapActions
                 .FirstOrDefault(x => x.GetType().Name.Equals(name, StringComparison.OrdinalIgnoreCase));
@@ -48,7 +43,7 @@ namespace DotScrapper
         public IEnumerable<IScrapper> AllScrappers()
             => _scrappers.AsEnumerable();
 
-        public IEnumerable<IPostScrapAction> AllPostActions()
+        public IEnumerable<IScrapAction> AllActions()
             => _postScrapActions.AsEnumerable();
 
         public static ScrapperManager FromAssembly(Assembly assembly)

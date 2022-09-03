@@ -150,10 +150,7 @@ namespace DotScrapper
 
         public ArgumentDefinition(string name, string? smallName, string? description = null)
         {
-            if(name == null)
-                throw new ArgumentNullException(nameof(name));
-
-            Name = name;
+            Name = name ?? throw new ArgumentNullException(nameof(name));
             SmallName = smallName;
             Description = description;
         }

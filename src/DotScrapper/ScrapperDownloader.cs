@@ -17,8 +17,8 @@ namespace DotScrapper
         private readonly ScrapperContext _context;
 
         public IList<IScrapper> Scrappers { get; init; }
-        public IList<IPostScrapAction?> PostScrapsActions { get; set; } 
-            = new List<IPostScrapAction?>();
+        public IList<IScrapAction?> ScrapsActions { get; set; } 
+            = new List<IScrapAction?>();
 
         public ScrapperDownloader(ScrapperContext ctx, IScrapper? scrapper = null)
         {
@@ -49,12 +49,13 @@ namespace DotScrapper
 
                 await Parallel.ForEachAsync(
                     scrapper.Perform(_context, query)
+                        .Take(query.MaxResults ?? int.MaxValue)
                     ,cancellationToken
                     ,async (x, token) =>
                     {
                         if (x.Url == null)
                             return;
-                        
+
                         try
                         {
                             using var resp = await _context.Http.GetAsync(x.Url, token);
@@ -80,25 +81,25 @@ namespace DotScrapper
                                 }
 
                                 // do custom scrap actions.
-                                if (PostScrapsActions.Count > 0)
+                                if (ScrapsActions.Count > 0)
                                 {
-                                    using var image = await Image.LoadAsync(filePath, token);
+                                    using var actionContext = new ActionContext(x, filePath);
 
-                                    foreach (var postScrapsAction in PostScrapsActions)
+                                    foreach (var postScrapsAction in ScrapsActions)
                                     {
                                         _logger.Information("Post Action: {action}", postScrapsAction?.GetType().Name);
 
                                         try
                                         {
-                                            postScrapsAction?.Apply(image);
+                                            await postScrapsAction?.Apply(actionContext)!;
                                         }
                                         catch (Exception ex)
                                         {
                                             _logger.Error(ex, "Post action error.");
                                         }
-
-                                        await image.SaveAsync(filePath, cancellationToken: token);
                                     }
+
+                                    await actionContext?.SaveAsync()!;
                                 }
 
                                 _logger.Verbose("[{url}] Downloaded.", x.Url);
@@ -118,8 +119,11 @@ namespace DotScrapper
 
         public ScrapperDownloader Using(IScrapper? scrapper)
         {
-            if(scrapper != null)
+            if (scrapper != null)
+            {
+                scrapper.Initialize(_context);
                 Scrappers.Add(scrapper);
+            }
             return this;
         }
 
@@ -127,13 +131,16 @@ namespace DotScrapper
         {
             if (scrappers != null)
                 foreach (var scrapper in scrappers)
+                {
+                    scrapper.Initialize(_context);
                     Scrappers.Add(scrapper);
+                }
             return this;
         }
-        public ScrapperDownloader UsingPost(IPostScrapAction? postScrapAction)
+        public ScrapperDownloader UsingActions(IScrapAction? postScrapAction)
         {
             if(postScrapAction != null)
-                PostScrapsActions.Add(postScrapAction);
+                ScrapsActions.Add(postScrapAction);
 
             return this;
         }

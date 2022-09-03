@@ -10,13 +10,27 @@ namespace DotScrapper
     {
         public string Name { get; }
         public string? Description { get; }
-        public bool RequireChromium { get; }
+        public ScrapperDefFlag Flags { get; }
 
-        public ScrapperDefinition(string name, bool requireChromium, string? description = null)
+        public ScrapperDefinition(string name, ScrapperDefFlag flags, string? description = null)
         {
             Name = name;
             Description = description;
-            RequireChromium = requireChromium;
+            Flags = flags;
         }
+    }
+
+    [Flags]
+    public enum ScrapperDefFlag
+    {
+        None = 0,
+        /// <summary>
+        /// This scrapper require chromium driver.
+        /// </summary>
+        RequireChromium = 1<<0,
+        /// <summary>
+        /// This scrapper require HtmlAgilityPack, used for CreateViewer.
+        /// </summary>
+        RequireHap=1<<1,
     }
 }

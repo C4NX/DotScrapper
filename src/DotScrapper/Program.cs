@@ -29,7 +29,7 @@ namespace DotScrapper
         private static ArgumentDefinition? ArgumentOutput;
         private static ArgumentDefinition? ArgumentQuery;
         private static ArgumentDefinition? ArgumentMax;
-        private static ArgumentDefinition? ArgumentPostAction;
+        private static ArgumentDefinition? ArgumentActions;
         private static ArgumentDefinition? ArgumentShow;
         private static ArgumentDefinition? ArgumentVerbose;
         private static ArgumentDefinition? ArgumentList;
@@ -65,23 +65,22 @@ namespace DotScrapper
                 = Arguments.Add(new("query", "q", "Set the query to use."));
             ArgumentMax
                 = Arguments.Add(new("max", "m", "Set the maximum number of images to get."));
-            ArgumentPostAction
-                = Arguments.Add(new("post", "p", "Set the post-scrapping action."));
+            ArgumentActions
+                = Arguments.Add(new("action", "a", "Chose actions to use."));
             ArgumentShow
                 = Arguments.Add(new("show", "s", "Shows the browser window in use."));
             ArgumentVerbose 
                 = Arguments.Add(new("verbose", "v", "logs. but deeper..."));
             ArgumentList 
-                = Arguments.Add(new("list", null, "Full list all scrappers/post-actions."));
+                = Arguments.Add(new("list", null, "Full list all scrappers/actions."));
             ArgumentProxy 
                 = Arguments.Add(new("proxy", null, "Tell all requests to pass on a proxy."));
-            ArgumentAutoClean 
-                = Arguments.Add(new("autoclean", "a", "Auto kill all still-running web driver (to remove)"));
-
             ArgumentForceEdge
                 = Arguments.Add(new("edge", null, "Force use of edge WebDriver"));
             ArgumentForceChrome
                 = Arguments.Add(new("chrome", null, "Force use of chrome WebDriver"));
+            ArgumentAutoClean
+                = Arguments.Add(new("autoclean", null, "edge-driver autoclean (to be removed)"));
         }
         
         public static async Task Main(string[] args)
@@ -107,7 +106,7 @@ namespace DotScrapper
 
             string? queryParam = ArgumentQuery?.GetActualData("Cat");
 
-            string? postParam = ArgumentPostAction?.GetActualData();
+            string? actionsParam = ArgumentActions?.GetActualData();
                 
             Logger.Information(VersionString);
 
@@ -121,11 +120,16 @@ namespace DotScrapper
             if (scrappers.Count == 0)
             {
                 Logger.Error("No scrapper was provided, please use -u(se) <scrapper>");
+                Logger.Error("Like {someScrappers}..."
+                    , string.Join(",", ScrapperRegister.AllScrappers()
+                        .Take(3)
+                        .Select(x=>x.Definition.Name))
+                    );
                 return;
             }
             
             // use edge chromium only if RequireChromium in that scrapper.
-            if (scrappers.Any(x => x.Definition.RequireChromium))
+            if (scrappers.Any(x => x.Definition.Flags.HasFlag(ScrapperDefFlag.RequireChromium)))
                 ConfigureWebDriver(scrapperContext);
             
             // handle ctrl exit.
@@ -135,7 +139,7 @@ namespace DotScrapper
 
                 // using that because Selenium may try to continue the connection to that driver, and create errors, like WebDriverException.
                 isLoggerEnabled = false;
-                scrapperContext.Dispose();
+                scrapperContext.DisposeContext();
                 Environment.Exit(0);
             };
             
@@ -152,17 +156,14 @@ namespace DotScrapper
                     .Using(scrappers);
 
                 // add post param post actions.
-                if (postParam != null)
-                    downloader.UsingPost(ScrapperRegister.GetPostActionByName(postParam));
+                if (actionsParam != null)
+                    downloader.UsingActions(ScrapperRegister.GetActionByName(actionsParam));
 
-
-                // show a concat of scrappers and post-scraps
-                Logger.Information("Using: {Usings}",
-                    string.Join(", ",
-                        downloader.Scrappers.Select(x => x.GetType().Name)
-                            .Concat(downloader.PostScrapsActions.Select(x => x?.GetType().Name))));
-
-                Logger.Information("Query: {Query}, To: {Dir}", queryParam ?? NullStr, outParam ?? NullStr);
+                Logger.Information("Usings: {usings} , Query: {Query}, To: {Dir}", string.Join(", ",
+                    downloader.Scrappers.Select(x => x.GetType().Name)
+                        .Concat(downloader.ScrapsActions.Select(x => x?.GetType().Name)))
+                    , queryParam
+                    , outParam);
 
                 await downloader.DownloadAsync(new ScrapperQuery(queryParam ?? NullStr
                         , ArgumentMax != null && ArgumentMax.IsPresent() 
@@ -176,16 +177,22 @@ namespace DotScrapper
             }
             finally
             {
-                if (outParam != null)
+                if (outParam != null && ArgumentCompress != null && ArgumentCompress.IsPresent())
                 {
                     try
                     {
-                        var zipFilename = Path.GetDirectoryName(outParam) + ".zip";
+                        var dirName = Path.GetDirectoryName(outParam);
+                        var zipFilename = 
+                            (dirName == null || string.IsNullOrEmpty(dirName) 
+                                ? outParam 
+                                : dirName) 
+                            + ".zip";
+
                         if (File.Exists(zipFilename))
                             File.Delete(zipFilename);
 
                         ZipFile.CreateFromDirectory(outParam, zipFilename);
-                        Logger.Information("Created ZIP: {Fn}", zipFilename);
+                        Logger.Information("Compressed to: {Fn}", zipFilename);
                     }
                     catch (Exception ex)
                     {
@@ -194,7 +201,7 @@ namespace DotScrapper
 
                 }
 
-                scrapperContext.Dispose();
+                scrapperContext.DisposeContext();
             }
         }
 
@@ -214,13 +221,13 @@ namespace DotScrapper
                 Console.ResetColor();
                 if (ScrapperRegister != null)
                 {
-                    Console.WriteLine($"Scrappers:");
+                    Console.WriteLine("Scrappers:");
                     Console.ForegroundColor = ConsoleColor.DarkGreen;
                     Console.WriteLine($"\t{string.Join(", ", ScrapperRegister.AllScrappers().Select(x => x.Definition.Name))}");
                     Console.ResetColor();
-                    Console.WriteLine($"Post-Actions:");
+                    Console.WriteLine("Post-Actions:");
                     Console.ForegroundColor = ConsoleColor.DarkGreen;
-                    Console.WriteLine($"\t{string.Join(", ", ScrapperRegister.AllPostActions().Select(x => x.GetType().Name))}");
+                    Console.WriteLine($"\t{string.Join(", ", ScrapperRegister.AllActions().Select(x => x.GetType().Name))}");
                 }
                 Console.ResetColor();
                 Console.WriteLine("Contribute:");
@@ -246,14 +253,14 @@ namespace DotScrapper
                 Console.ResetColor();
                 if (ScrapperRegister != null)
                 {
-                    Console.WriteLine($"Scrappers:");
+                    Console.WriteLine("Scrappers:");
                     Console.ForegroundColor = ConsoleColor.DarkYellow;
                     foreach (var x in ScrapperRegister.AllScrappers())
-                        Console.WriteLine($"\t{(x.Definition.RequireChromium ? "[WD 🔎]" : "       ")} {ANSI_RESET}{x.Definition.Name} - {x.Definition.Description ?? "<no-description>"}");
+                        Console.WriteLine($"\t{(x.Definition.Flags.HasFlag(ScrapperDefFlag.RequireChromium) ? "[WD 🔎]" : "       ")} {ANSI_RESET}{x.Definition.Name} - {x.Definition.Description ?? "<no-description>"}");
                     Console.ResetColor();
-                    Console.WriteLine($"Post-Actions:");
+                    Console.WriteLine("Actions:");
                     Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"\t{string.Join(", ", ScrapperRegister.AllPostActions().Select(x=>x.GetType().Name))}");
+                    Console.WriteLine($"\t{string.Join(", ", ScrapperRegister.AllActions().Select(x=>x.GetType().Name))}");
                     Console.ResetColor();
                 }
                 Console.WriteLine("Assemblies:");
@@ -319,7 +326,7 @@ namespace DotScrapper
         }
 
         /// <summary>
-        /// Configure the webdriver to use, webdriver can be forced to be use but in auto, windows chose edge and other system use chrome.
+        /// Configure the web driver to use, web driver can be forced to be use but in auto, windows chose edge and other system use chrome.
         /// </summary>
         /// <param name="ctx"></param>
         static void ConfigureWebDriver(ScrapperContext ctx)
@@ -400,8 +407,6 @@ namespace DotScrapper
                 if (ArgumentShow != null && !ArgumentShow.IsPresent())
                     edgeOptions.AddArgument("--headless");
 
-        
-        
                 var driver = new EdgeDriver(edgeDriverService, edgeOptions);
                 Logger.Information("Using EdgeDriver: {Version}", driver.Capabilities.GetCapability("browserVersion"));
 
@@ -420,8 +425,8 @@ namespace DotScrapper
             
             return false;
         }
-        
-        static void LogPostInformation()
+
+        private static void LogPostInformation()
         {
             if (ScrapperRegister == null) 
                 return;
@@ -432,14 +437,14 @@ namespace DotScrapper
                     ScrapperRegister.AllScrappers()
                         .Select(x => x.Definition.Name)));
 
-            Logger.Information("Available post-actions: {Actions}"
-                , string.Join(", ", ScrapperRegister.AllPostActions().Select(x => x.GetType().Name)));
+            Logger.Information("Available actions: {Actions}"
+                , string.Join(", ", ScrapperRegister.AllActions().Select(x => x.GetType().Name)));
         }
-        
-        static string GetVersionString()
+
+        private static string GetVersionString()
             => $"DotScrapper ✂ - {typeof(Program).Assembly.GetName().Version}, {BuildInGit.GetBuildInGitVersion() ?? NullStr}";
 
-        static IList<IScrapper> GetScrappersArgument()
+        private static IList<IScrapper> GetScrappersArgument()
             => ScrapperRegister == null 
                 ? new List<IScrapper>()
                 : new List<IScrapper>(

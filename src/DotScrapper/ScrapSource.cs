@@ -11,8 +11,8 @@ namespace DotScrapper
     /// </summary>
     public class ScrapSource
     {
-        public readonly static ScrapSource Empty
-            = new ScrapSource(null, null);
+        public static readonly ScrapSource Empty
+            = new (null, null);
     
         /// <summary>
         /// Get the <see cref="ScrapSource"/> file url.
